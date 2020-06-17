@@ -44,7 +44,7 @@ def main():
     election = [election_info(row) for row in rows]
     info = county_info(header_div)
     print(info, election)
-    save_csv_2(info,election)
+    save_csv_2([info],[election])
     # save_csv(election)
 
 def get_answer():
@@ -53,25 +53,29 @@ def get_answer():
 def pull_data(ans):
     return bs(ans.text, "html.parser")
 
-def find_row(tabl):
-    return tabl[0].find_all('tr')[2:]
+def find_row(tables):
+    return [
+        row
+        for table in tables
+        for row in table.find_all('tr')[2:]
+    ]
 
 def county_info(parsed):
     for contain in parsed:
         people = contain.find('td',class_='cislo', headers='sa2').text
         is_env = contain.find('td',class_='cislo', headers='sa3').text
         submitted = contain.find('td',class_='cislo', headers='sa5').text
-        return [{
+        return {
             "Volici v seznamu":people,
             "Vydané obálky":is_env,
             "Platné hlasy":submitted
-        }]
+        }
 def election_info(tr) -> dict:
         party = tr.find_all("td")[1].text
         votes = tr.find_all('td')[2].text
         return {
             "PARTY": party,
-            "VOTES": votes,
+            "VOTES": votes
         }
 
 def save_csv_2(data: List[dict], data2):
@@ -87,22 +91,14 @@ def save_csv_2(data: List[dict], data2):
                   'Strana Práv Občanů']
         writer = csv.DictWriter(csv_file, fieldnames=header)
         writer.writeheader()
-        for index, _ in enumerate(data):
-            writer.writerow(
-                {
-                 'Volici v seznamu': data[index]["Volici v seznamu"],
-                 'Vydané obálky': data[index]["Vydané obálky"],
-                 'Platné hlasy': data[index]["Platné hlasy"],
-                 }
-            )
-        for index, _ in enumerate(data2):
-            writer.writerow(
-                {
-                    "Občanská demokratická strana": data2[index]["VOTES"],
-                    'Řád národa - Vlastenecká unie': data2[index]["VOTES"],
-                    'CESTA ODPOVĚDNÉ SPOLEČNOSTI': data2[index]["VOTES"],
-                }
-            )
+
+        for data_row, data2_row in zip(data, data2):
+            row_dict = data_row
+            for party_votes in data2_row:
+                row_dict[party_votes["PARTY"]] = party_votes["VOTES"]
+
+            writer.writerow(row_dict)
+
 
 if __name__ == '__main__':
     main()
